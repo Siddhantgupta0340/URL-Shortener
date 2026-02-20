@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>URL Shortener</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      background: white;
+      width: 90%;
+      max-width: 900px;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    }
+    h1 { text-align: center; margin-bottom: 20px; color: #333; }
+
+    form { display: flex; gap: 10px; margin-bottom: 25px; }
+    input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #667eea;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #5a67d8; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table thead { background: #667eea; color: white; }
+    table th, table td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    table tr:hover { background: #f1f1f1; }
+
+    a { color: #667eea; font-weight: bold; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .empty-msg { text-align:center; margin-top:20px; color:#666; }
+
+    /* Toast Popup */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 18px;
+      border-radius: 6px;
+      color: #fff;
+      display: none;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      animation: fadeIn 0.3s ease;
+    }
+    .toast.error { background: #e74c3c; }
+    .toast.success { background: #2ecc71; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🚀 URL Shortener</h1>
+
+    <form id="urlForm">
+      <input type="text" id="urlInput" placeholder="https://example.com" required />
+      <button type="submit">Generate</button>
+    </form>
+
+    <% if (typeof urls !== 'undefined' && urls.length > 0) { %>
+      <table id="url-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Short URL</th>
+            <th>Original URL</th>
+            <th>Clicks</th>
+          </tr>
+        </thead>
+        <tbody id="urlBody">
+          <% urls.forEach((url, index) => { %>
+            <tr id="row-<%= url.shortId %>">
+              <td><%= index + 1 %></td>
+              <td>
+                <a href="/url/<%= url.shortId %>" target="_blank">
+                  <%= url.shortId %>
+                </a>
+              </td>
+              <td><%= url.redirectUrl %></td>
+              <td class="clicks"><%= url.visitHistory.length %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } else { %>
+      <p class="empty-msg" id="empty-msg">No URLs Created Yet</p>
+    <% } %>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const form = document.getElementById("urlForm");
+    const input = document.getElementById("urlInput");
+    const toast = document.getElementById("toast");
+
+    function showToast(msg, success = false) {
+      toast.innerText = msg;
+      toast.className = "toast " + (success ? "success" : "error");
+      toast.style.display = "block";
+      setTimeout(() => toast.style.display = "none", 3000);
+    }
+
+    function ensureTableExists() {
+      let table = document.getElementById("url-table");
+      if (!table) {
+        document.getElementById("empty-msg")?.remove();
+        table = document.createElement("table");
+        table.id = "url-table";
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Short URL</th>
+              <th>Original URL</th>
+              <th>Clicks</th>
+            </tr>
+          </thead>
+          <tbody id="urlBody"></tbody>
+        `;
+        document.querySelector(".container").appendChild(table);
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault(); // ❌ reload band
+
+      const url = input.value.trim();
+
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        showToast("Please enter a valid URL format (must start with http:// or https://)");
+        return;
+      }
+
+      try {
+        const res = await fetch("/url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showToast(data.error || "Something went wrong");
+          return;
+        }
+
+        showToast("Short URL created successfully!", true);
+
+        ensureTableExists();
+
+        const tbody = document.getElementById("urlBody");
+        const rowCount = tbody.children.length + 1;
+
+        const tr = document.createElement("tr");
+        tr.id = `row-${data.shortId}`;
+        tr.innerHTML = `
+          <td>${rowCount}</td>
+          <td><a href="/url/${data.shortId}" target="_blank">${data.shortId}</a></td>
+          <td>${data.redirectUrl}</td>
+          <td class="clicks">0</td>
+        `;
+
+        tbody.appendChild(tr);
+        input.value = "";
+
+      } catch (err) {
+        showToast("Server error. Try again!");
+      }
+    });
+  </script>
+
+</body>
+</html>
