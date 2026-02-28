@@ -1,208 +1,173 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>URL Shortener</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
+  <title>Dashboard</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
     body {
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 20px;
+    }
+    .header {
       display: flex;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
+      margin-bottom: 20px;
     }
-    .container {
+    .card {
       background: white;
-      width: 90%;
-      max-width: 900px;
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
-    h1 { text-align: center; margin-bottom: 20px; color: #333; }
-
-    form { display: flex; gap: 10px; margin-bottom: 25px; }
     input {
-      flex: 1;
-      padding: 12px;
-      border-radius: 8px;
+      padding: 10px;
+      width: 300px;
+      border-radius: 5px;
       border: 1px solid #ccc;
-      font-size: 16px;
     }
     button {
-      padding: 10px 16px;
+      padding: 10px 15px;
       border: none;
-      border-radius: 6px;
-      background: #667eea;
-      color: white;
-      font-size: 15px;
+      border-radius: 5px;
       cursor: pointer;
-      transition: 0.3s;
+      background: #4f46e5;
+      color: white;
     }
-    button:hover { background: #5a67d8; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    table thead { background: #667eea; color: white; }
-    table th, table td {
+    .logout {
+      background: #ef4444;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
       padding: 10px;
-      text-align: center;
       border-bottom: 1px solid #ddd;
+      text-align: center;
     }
-    table tr:hover { background: #f1f1f1; }
-
-    a { color: #667eea; font-weight: bold; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .empty-msg { text-align:center; margin-top:20px; color:#666; }
-
-    /* Toast Popup */
-    .toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 18px;
-      border-radius: 6px;
-      color: #fff;
-      display: none;
-      font-weight: 500;
-      z-index: 9999;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      animation: fadeIn 0.3s ease;
+    th {
+      background: #eef2ff;
     }
-    .toast.error { background: #e74c3c; }
-    .toast.success { background: #2ecc71; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .delete {
+      background: #dc2626;
+    }
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>🚀 URL Shortener</h1>
-
-    <form id="urlForm">
-      <input type="text" id="urlInput" placeholder="https://example.com" required />
-      <button type="submit">Generate</button>
-    </form>
-
-    <% if (typeof urls !== 'undefined' && urls.length > 0) { %>
-      <table id="url-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Short URL</th>
-            <th>Original URL</th>
-            <th>Clicks</th>
-          </tr>
-        </thead>
-        <tbody id="urlBody">
-          <% urls.forEach((url, index) => { %>
-            <tr id="row-<%= url.shortId %>">
-              <td><%= index + 1 %></td>
-              <td>
-                <a href="/url/<%= url.shortId %>" target="_blank">
-                  <%= url.shortId %>
-                </a>
-              </td>
-              <td><%= url.redirectUrl %></td>
-              <td class="clicks"><%= url.visitHistory.length %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    <% } else { %>
-      <p class="empty-msg" id="empty-msg">No URLs Created Yet</p>
-    <% } %>
+  <div class="header">
+    <h2>URL Shortener Dashboard</h2>
+    <a href="/user/logout">
+      <button class="logout">Logout</button>
+    </a>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <div class="card">
+    <form id="urlForm">
+      <input id="urlInput" type="text" placeholder="Enter full URL https://example.com" required />
+      <button type="submit">Create Short URL</button>
+    </form>
+    <p id="error" class="error"></p>
+  </div>
+
+  <div class="card">
+    <table>
+      <tr>
+        <th>Short URL</th>
+        <th>Original URL</th>
+        <th>Visits</th>
+        <th>Action</th>
+      </tr>
+      <% urls.forEach(u => { %>
+        <tr>
+          <td>
+            <a href="/url/<%= u.shortId %>" target="_blank">
+              <%= u.shortId %>
+            </a>
+          </td>
+          <td style="max-width:300px; word-break: break-all;">
+            <%= u.redirectUrl %>
+          </td>
+          <td><%= u.visitHistory.length %></td>
+          <td>
+            <button class="delete" onclick="deleteUrl('<%= u._id %>')">Delete</button>
+          </td>
+        </tr>
+      <% }) %>
+    </table>
+  </div>
 
   <script>
     const form = document.getElementById("urlForm");
-    const input = document.getElementById("urlInput");
-    const toast = document.getElementById("toast");
+    const urlInput = document.getElementById("urlInput");
+    const errorBox = document.getElementById("error");
 
-    function showToast(msg, success = false) {
-      toast.innerText = msg;
-      toast.className = "toast " + (success ? "success" : "error");
-      toast.style.display = "block";
-      setTimeout(() => toast.style.display = "none", 3000);
-    }
-
-    function ensureTableExists() {
-      let table = document.getElementById("url-table");
-      if (!table) {
-        document.getElementById("empty-msg")?.remove();
-        table = document.createElement("table");
-        table.id = "url-table";
-        table.innerHTML = `
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Short URL</th>
-              <th>Original URL</th>
-              <th>Clicks</th>
-            </tr>
-          </thead>
-          <tbody id="urlBody"></tbody>
-        `;
-        document.querySelector(".container").appendChild(table);
+    function isValidUrl(value) {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch {
+        return false;
       }
     }
 
     form.addEventListener("submit", async (e) => {
-      e.preventDefault(); // ❌ reload band
+      e.preventDefault(); // ❌ stop reload
+      errorBox.innerText = "";
 
-      const url = input.value.trim();
+      const url = urlInput.value.trim();
 
-      if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        showToast("Please enter a valid URL format (must start with http:// or https://)");
+      if (!url) {
+        errorBox.innerText = "Please enter a URL";
         return;
       }
 
-      try {
-        const res = await fetch("/url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          showToast(data.error || "Something went wrong");
-          return;
-        }
-
-        showToast("Short URL created successfully!", true);
-
-        ensureTableExists();
-
-        const tbody = document.getElementById("urlBody");
-        const rowCount = tbody.children.length + 1;
-
-        const tr = document.createElement("tr");
-        tr.id = `row-${data.shortId}`;
-        tr.innerHTML = `
-          <td>${rowCount}</td>
-          <td><a href="/url/${data.shortId}" target="_blank">${data.shortId}</a></td>
-          <td>${data.redirectUrl}</td>
-          <td class="clicks">0</td>
-        `;
-
-        tbody.appendChild(tr);
-        input.value = "";
-
-      } catch (err) {
-        showToast("Server error. Try again!");
+      if (!isValidUrl(url)) {
+        errorBox.innerText = "Please enter a valid URL (https://...)";
+        return;
       }
+
+      const res = await fetch("/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ url })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorBox.innerText = data.error || "Failed to create short URL";
+        return;
+      }
+
+      window.location.reload(); // ✅ reload only on success
     });
+
+    async function deleteUrl(id) {
+      if (!confirm("Delete this URL?")) return;
+
+      const res = await fetch("/url/" + id, {
+        method: "DELETE",
+        credentials: "same-origin"
+      });
+
+      if (!res.ok) {
+        alert("Delete failed");
+        return;
+      }
+
+      window.location.reload();
+    }
   </script>
 
 </body>

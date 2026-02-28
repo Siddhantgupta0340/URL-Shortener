@@ -1,16 +1,16 @@
 const express = require("express");
 const {
-  handlerCreateShortUrl,
-  handlerGetRedirect,
-  handlerDeleteUrl,
-  handlerGetAnalytics,
+  handleCreateShortUrl,
+  handleRedirect,
+  handleDeleteUrl,
 } = require("../controllers/url");
+
+const { checkAuth } = require("../middlewares/auth");
 
 const router = express.Router();
 
-router.post("/", handlerCreateShortUrl);
-router.get("/analytics/:shortId", handlerGetAnalytics);
-router.get("/:shortId", handlerGetRedirect);
-router.delete("/:shortId", handlerDeleteUrl);
+router.post("/", checkAuth, handleCreateShortUrl);
+router.get("/:shortId", handleRedirect);
+router.delete("/:id", checkAuth, handleDeleteUrl);
 
 module.exports = router;

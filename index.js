@@ -1,28 +1,55 @@
 const express = require("express");
+const mongoose = require("mongoose");
+const cookieParser = require("cookie-parser");
 const path = require("path");
-const { connectToMongodb } = require("./connect");
+require("dotenv").config();
 
-const urlRoute = require("./routes/url");
-const staticRoute = require("./routes/staticRouter");
+const userRoutes = require("./routes/user");
+const urlRoutes = require("./routes/url");
+const { checkAuth } = require("./middlewares/auth");
+const URLModel = require("./models/url");
 
 const app = express();
-const PORT = 8001;
 
-connectToMongodb("mongodb://localhost:27017/url-shortener").then(() =>
-  console.log("MongoDB Connected")
-);
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, "public")));
 
 app.set("view engine", "ejs");
-app.set("views", path.resolve("./views"));
+app.set("views", path.join(__dirname, "views"));
 
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+// Routes
+app.use("/user", userRoutes);
+app.use("/url", urlRoutes);
 
-app.use("/url", urlRoute);
-app.use("/", staticRoute);
-app.use((req, res) => {
-  return res.redirect("/?error=notfound");
+// Default route → Login page
+app.get("/", (req, res) => {
+  res.redirect("/login");
 });
 
+// Pages
+app.get("/login", (req, res) => {
+  res.render("login");
+});
 
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.get("/signup", (req, res) => {
+  res.render("signup");
+});
+
+// Dashboard (Protected)
+app.get("/dashboard", checkAuth, async (req, res) => {
+  const urls = await URLModel.find({ createdBy: req.user._id });
+  res.render("index", { user: req.user, urls });
+});
+
+// MongoDB
+mongoose
+  .connect("mongodb://127.0.0.1:27017/url-shortener")
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.log(err));
+
+app.listen(3000, () => {
+  console.log("Server running at http://localhost:3000");
+});
