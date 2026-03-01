@@ -24,7 +24,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use("/user", userRoutes);
 app.use("/url", urlRoutes);
 
-// Default route → Login page
+// Default route → Login
 app.get("/", (req, res) => {
   res.redirect("/login");
 });
@@ -44,7 +44,7 @@ app.get("/dashboard", checkAuth, async (req, res) => {
   res.render("index", { user: req.user, urls });
 });
 
-// MongoDB
+// DB
 mongoose
   .connect("mongodb://127.0.0.1:27017/url-shortener")
   .then(() => console.log("MongoDB connected"))

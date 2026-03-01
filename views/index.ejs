@@ -3,172 +3,98 @@
 <head>
   <title>Dashboard</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f8fafc;
-      margin: 0;
-      padding: 20px;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    input {
-      padding: 10px;
-      width: 300px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      background: #4f46e5;
-      color: white;
-    }
-    .logout {
-      background: #ef4444;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      text-align: center;
-    }
-    th {
-      background: #eef2ff;
-    }
-    .delete {
-      background: #dc2626;
-    }
-    .error {
-      color: red;
-      text-align: center;
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    input { padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #ccc; }
+    button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; background: #4f46e5; color: white; }
+    .logout { background: #ef4444; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
+    th { background: #eef2ff; }
+    .delete { background: #dc2626; }
+    .error { color: red; text-align: center; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h2>URL Shortener Dashboard</h2>
-    <a href="/user/logout">
-      <button class="logout">Logout</button>
-    </a>
-  </div>
+<div class="header">
+  <h2>URL Shortener Dashboard</h2>
+  <a href="/user/logout"><button class="logout">Logout</button></a>
+</div>
 
-  <div class="card">
-    <form id="urlForm">
-      <input id="urlInput" type="text" placeholder="Enter full URL https://example.com" required />
-      <button type="submit">Create Short URL</button>
-    </form>
-    <p id="error" class="error"></p>
-  </div>
+<div class="card">
+  <form id="urlForm">
+    <input id="urlInput" type="text" placeholder="Enter full URL https://example.com" required />
+    <button type="submit">Create Short URL</button>
+  </form>
+  <p id="error" class="error"></p>
+</div>
 
-  <div class="card">
-    <table>
+<div class="card">
+  <table>
+    <tr>
+      <th>Short URL</th>
+      <th>Original URL</th>
+      <th>Visits</th>
+      <th>Action</th>
+    </tr>
+    <% urls.forEach(u => { %>
       <tr>
-        <th>Short URL</th>
-        <th>Original URL</th>
-        <th>Visits</th>
-        <th>Action</th>
+        <td><a href="/url/<%= u.shortId %>" target="_blank"><%= u.shortId %></a></td>
+        <td style="max-width:300px; word-break: break-all;"><%= u.redirectUrl %></td>
+        <td><%= u.visitHistory.length %></td>
+        <td><button class="delete" onclick="deleteUrl('<%= u._id %>')">Delete</button></td>
       </tr>
-      <% urls.forEach(u => { %>
-        <tr>
-          <td>
-            <a href="/url/<%= u.shortId %>" target="_blank">
-              <%= u.shortId %>
-            </a>
-          </td>
-          <td style="max-width:300px; word-break: break-all;">
-            <%= u.redirectUrl %>
-          </td>
-          <td><%= u.visitHistory.length %></td>
-          <td>
-            <button class="delete" onclick="deleteUrl('<%= u._id %>')">Delete</button>
-          </td>
-        </tr>
-      <% }) %>
-    </table>
-  </div>
+    <% }) %>
+  </table>
+</div>
 
-  <script>
-    const form = document.getElementById("urlForm");
-    const urlInput = document.getElementById("urlInput");
-    const errorBox = document.getElementById("error");
+<script>
+  const form = document.getElementById("urlForm");
+  const urlInput = document.getElementById("urlInput");
+  const errorBox = document.getElementById("error");
 
-    function isValidUrl(value) {
-      try {
-        const parsed = new URL(value);
-        return parsed.protocol === "http:" || parsed.protocol === "https:";
-      } catch {
-        return false;
-      }
+  function isValidUrl(value) {
+    try {
+      const u = new URL(value);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
     }
+  }
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault(); // ❌ stop reload
-      errorBox.innerText = "";
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.innerText = "";
 
-      const url = urlInput.value.trim();
+    const url = urlInput.value.trim();
+    if (!url) return errorBox.innerText = "Please enter a URL";
+    if (!isValidUrl(url)) return errorBox.innerText = "Invalid URL format";
 
-      if (!url) {
-        errorBox.innerText = "Please enter a URL";
-        return;
-      }
-
-      if (!isValidUrl(url)) {
-        errorBox.innerText = "Please enter a valid URL (https://...)";
-        return;
-      }
-
-      const res = await fetch("/url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ url })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        errorBox.innerText = data.error || "Failed to create short URL";
-        return;
-      }
-
-      window.location.reload(); // ✅ reload only on success
+    const res = await fetch("/url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
     });
 
-    async function deleteUrl(id) {
-      if (!confirm("Delete this URL?")) return;
+    const data = await res.json();
 
-      const res = await fetch("/url/" + id, {
-        method: "DELETE",
-        credentials: "same-origin"
-      });
-
-      if (!res.ok) {
-        alert("Delete failed");
-        return;
-      }
-
-      window.location.reload();
+    if (!res.ok) {
+      errorBox.innerText = data.error;
+      return; // ❌ no reload on error
     }
-  </script>
+
+    window.location.reload(); // ✅ reload only on success
+  });
+
+  async function deleteUrl(id) {
+    if (!confirm("Delete this URL?")) return;
+    const res = await fetch("/url/" + id, { method: "DELETE" });
+    if (!res.ok) return alert("Delete failed");
+    window.location.reload();
+  }
+</script>
 
 </body>
 </html>
